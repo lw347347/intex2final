@@ -25,7 +25,7 @@ SECRET_KEY = 'one649vmwu8t*k00sskw-%e=h=uuv3*=4s!vmyi-o3$-)y+=y4'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'sprint5is413.herokuapp.com', '96.19.85.39', 'ec2-52-201-219-100.compute-1.amazonaws.com']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'sprint5is413.herokuapp.com', '96.19.85.39']
 
 
 # Application definition

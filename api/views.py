@@ -303,6 +303,13 @@ class PredictionCalculator(APIView):
         description_language = request.query_params.get('description_language')
         creator_type = '0'
 
+        # Grab the inputs from formik for the donations calculator
+        auto_fb_post_mode = request.query_params.get('auto_fb_post_mode')
+        currencycode = request.query_params.get('currencycode')
+        user_facebook_id = request.query_params.get('user_facebook_id')
+        location_country = request.query_params.get('location_country')
+
+
         # Determine creator type
         if is_individual == 'true':
             creator_type = '0'
@@ -325,6 +332,17 @@ class PredictionCalculator(APIView):
         else:
             visible_in_search = '0'
 
+        # Change auto_fb_post_mode to number
+        if auto_fb_post_mode == 'true':
+            auto_fb_post_mode = '1'
+        else:
+            auto_fb_post_mode = '0'
+
+        # Change user_facebook_id to number
+        if user_facebook_id == 'true':
+            user_facebook_id = '1'
+        else:
+            user_facebook_id = '0'
 
         # assign all the parameters to variables which you put in the API like the commented code
         # or just put them in directly like I did farther down
@@ -336,6 +354,61 @@ class PredictionCalculator(APIView):
         # smoker = str(request.POST['smoker'])
         # region = str(request.POST['region'])
         
+        donorData =  {
+                    "Inputs": {
+                        "input1": {
+                        "ColumnNames": [
+                            "auto_fb_post_mode",
+                            "currencycode",
+                            "goal",
+                            "title",
+                            "description",
+                            "has_beneficiary",
+                            "user_facebook_id",
+                            "visible_in_search",
+                            "location_country",
+                            "creator_type",
+                            "description Language"
+                        ],
+                        "Values": [
+                            [
+                            auto_fb_post_mode,
+                            currencycode,
+                            goal,
+                            title,
+                            description,
+                            has_beneficiary,
+                            user_facebook_id,
+                            visible_in_search,
+                            location_country,
+                            creator_type,
+                            description_language
+                            ]
+                        ]
+                        }
+                    },
+                    "GlobalParameters": {}
+                    }
+        # the API call
+        body = str.encode(json.dumps(donorData))
+        url = 'https://ussouthcentral.services.azureml.net/workspaces/b7fcea30955b4e65baaa8dfa89044435/services/27397440e0f04626b791a9fd2257b2c8/execute?api-version=2.0&details=true'
+        api_key = 'h4A9kOn6xELpLbA+ouvOMEl6MY2C5Pca0LMJl7XCc9fUh/6ike1zAYL3/iQzbN8zfY2F0rIUxUHxkJVAkGQpHQ=='
+        # Replace my url and api_key with your own values
+        headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
+
+        # If you are using Python 3+, replace urllib2 with urllib.request
+        #req = urllib2.Request(url, body, headers)
+        req = urllib.request.Request(url, body, headers) 
+
+        # python3 uses urllib while python uses urllib2
+        #response = urllib2.request.urlopen(req)
+        response = urllib.request.urlopen(req)
+
+        # this formats the results 
+        result = response.read()
+        result = json.loads(result) # turns bits into json object
+        numberOfDonors = result["Results"]["output1"]["value"]["Values"][0][0] 
+
         # formatting the data into a data object for the API call
         data =  {
                 "Inputs": {
@@ -389,10 +462,14 @@ class PredictionCalculator(APIView):
         
         # Reverse the transformation that we had in Azure
         totalPercentOfGoal = totalPercentOfGoal = float(totalPercentOfGoal)**6
+
+        # Reverse the transformation that we had in Azure
+        numberOfDonors = math.exp(float(numberOfDonors))
         
         # Make the response to send back to React
         totalAmount = str(round((float(totalPercentOfGoal) * float(goal)), 2))
-        responseForReact = [totalAmount,totalPercentOfGoal]
+        amountPerDonor = str(round((float(totalAmount) / float(numberOfDonors)), 2))
+        responseForReact = [totalAmount, totalPercentOfGoal, numberOfDonors, amountPerDonor]
         
         # serializer = PredictionCalculatorSerializer(cats, many=True)
         return Response(responseForReact)
