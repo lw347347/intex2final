@@ -309,6 +309,23 @@ class PredictionCalculator(APIView):
         user_facebook_id = request.query_params.get('user_facebook_id')
         location_country = request.query_params.get('location_country')
 
+        # Determine the correct amount to change it to USD
+        if currencycode == 'AUD':
+            goal = float(goal) * .63
+        elif currencycode == 'CAD':
+            goal = float(goal) * .71
+        elif currencycode == 'CHF':
+            goal = float(goal) * 1.03
+        elif currencycode == 'DKK':
+            goal = float(goal) * .15
+        elif currencycode == 'EUR':
+            goal = float(goal) * 1.09
+        elif currencycode == 'GBP':
+            goal = float(goal) * 1.24
+        elif currencycode == 'NOK':
+            goal = float(goal) * .097
+        elif currencycode == 'SEK':
+            goal = float(goal) * .2
 
         # Determine creator type
         if is_individual == 'true':
@@ -360,7 +377,7 @@ class PredictionCalculator(APIView):
                         "ColumnNames": [
                             "auto_fb_post_mode",
                             "currencycode",
-                            "goal",
+                            "goal_in_usd",
                             "title",
                             "description",
                             "has_beneficiary",
@@ -373,7 +390,7 @@ class PredictionCalculator(APIView):
                         "Values": [
                             [
                             auto_fb_post_mode,
-                            currencycode,
+                            "USD",
                             goal,
                             title,
                             description,
@@ -391,8 +408,8 @@ class PredictionCalculator(APIView):
                     }
         # the API call
         body = str.encode(json.dumps(donorData))
-        url = 'https://ussouthcentral.services.azureml.net/workspaces/b7fcea30955b4e65baaa8dfa89044435/services/27397440e0f04626b791a9fd2257b2c8/execute?api-version=2.0&details=true'
-        api_key = 'h4A9kOn6xELpLbA+ouvOMEl6MY2C5Pca0LMJl7XCc9fUh/6ike1zAYL3/iQzbN8zfY2F0rIUxUHxkJVAkGQpHQ=='
+        url = 'https://ussouthcentral.services.azureml.net/workspaces/b7fcea30955b4e65baaa8dfa89044435/services/1c3f84043a484162b1c0a4a015c5f304/execute?api-version=2.0&details=true'
+        api_key = 'wQ9mPascHS4eC2ZUufNc3GXvdIjYGClbl7e+63qIRY78GgL4bcI9r7BXPugFg+Gxq+MesMD4fhGSipIfmXukMA=='
         # Replace my url and api_key with your own values
         headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
 
@@ -410,40 +427,12 @@ class PredictionCalculator(APIView):
         numberOfDonors = result["Results"]["output1"]["value"]["Values"][0][0] 
 
         # formatting the data into a data object for the API call
-        data =  {
-                "Inputs": {
-                    "input1": {
-                    "ColumnNames": [
-                        "campaign_id",
-                        "goal",
-                        "title",
-                        "description",
-                        "has_beneficiary",
-                        "visible_in_search",
-                        "creator_type",
-                        "description Language"
-                    ],
-                    "Values": [
-                        [
-                        campaign_id,
-                        goal,
-                        title,
-                        description,
-                        has_beneficiary,
-                        visible_in_search,
-                        creator_type,
-                        description_language
-                        ]
-                    ]
-                    }
-                },
-                "GlobalParameters": {}
-                }
+        data = donorData
 
         # the API call
         body = str.encode(json.dumps(data))
-        url = 'https://ussouthcentral.services.azureml.net/workspaces/b7fcea30955b4e65baaa8dfa89044435/services/d67343eff77f4da8816f310ad22f74f3/execute?api-version=2.0&details=true'
-        api_key = 'eznkftQu4cspVH/yRkW07L5CXI8itN/q3AeQyKryesI35MT61KXEGs6gjFQaTWizGqlYgcazuR+tC3VlO8B4ww=='
+        url = 'https://ussouthcentral.services.azureml.net/workspaces/b7fcea30955b4e65baaa8dfa89044435/services/d861352da1874e83b7b0d7bc2e5fae0b/execute?api-version=2.0&details=true'
+        api_key = 'zJA0MPfwop0ULp+kxvDjEy6SJ8A/5t6JrrG5knBDsvCdQiraxwnWX/xRlGo79TziWY3xMfqHWg6EJJW1b5BV+g=='
         # Replace my url and api_key with your own values
         headers = {'Content-Type':'application/json', 'Authorization':('Bearer '+ api_key)}
 
@@ -458,18 +447,38 @@ class PredictionCalculator(APIView):
         # this formats the results 
         result = response.read()
         result = json.loads(result) # turns bits into json object
-        totalPercentOfGoal = result["Results"]["output1"]["value"]["Values"][0][0] 
+        current_amount_prediction = result["Results"]["output1"]["value"]["Values"][0][0] 
+
+        print('hello')
+
+        # Convert everything back to USD
+        if currencycode == 'AUD':
+            current_amount_prediction = float(current_amount_prediction) / .63
+        elif currencycode == 'CAD':
+            current_amount_prediction = float(current_amount_prediction) / .71
+        elif currencycode == 'CHF':
+            current_amount_prediction = float(current_amount_prediction) / 1.03
+        elif currencycode == 'DKK':
+            current_amount_prediction = float(current_amount_prediction) / .15
+        elif currencycode == 'EUR':
+            current_amount_prediction = float(current_amount_prediction) / 1.09
+        elif currencycode == 'GBP':
+            current_amount_prediction = float(current_amount_prediction) / 1.24
+        elif currencycode == 'NOK':
+            current_amount_prediction = float(current_amount_prediction) / .097
+        elif currencycode == 'SEK':
+            current_amount_prediction = float(current_amount_prediction) / .2
         
         # Reverse the transformation that we had in Azure
-        totalPercentOfGoal = totalPercentOfGoal = float(totalPercentOfGoal)**6
+        current_amount_prediction = math.exp(float(current_amount_prediction))
 
         # Reverse the transformation that we had in Azure
         numberOfDonors = math.exp(float(numberOfDonors))
         
         # Make the response to send back to React
-        totalAmount = str(round((float(totalPercentOfGoal) * float(goal)), 2))
-        amountPerDonor = str(round((float(totalAmount) / float(numberOfDonors)), 2))
-        responseForReact = [totalAmount, totalPercentOfGoal, numberOfDonors, amountPerDonor]
+        totalPercentOfGoal = str((float(current_amount_prediction) / float(goal)))
+        amountPerDonor = str(round((float(current_amount_prediction) / float(numberOfDonors)), 2))
+        responseForReact = [current_amount_prediction, totalPercentOfGoal, int(numberOfDonors), amountPerDonor]
         
         # serializer = PredictionCalculatorSerializer(cats, many=True)
         return Response(responseForReact)
